@@ -1,0 +1,213 @@
+import React from "react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { motion } from "framer-motion";
+import { useState, useEffect } from "react";
+import { useDrop } from "react-dnd";
+import { DndProvider, useDrag } from "react-dnd";
+import { HTML5Backend } from "react-dnd-html5-backend";
+import { Howl } from "howler";
+
+const cities = [
+  {
+    name: "Paris",
+    description: "Элегантность и haute couture.",
+    challenge: "Собери образ для показа в Париже!",
+  },
+  {
+    name: "Tokyo",
+    description: "Уличная мода и кэй-стили.",
+    challenge: "Создай стильный кэжуал-лук для Харадзюку!",
+  },
+  {
+    name: "Milan",
+    description: "Люксовая мода и традиции.",
+    challenge: "Найди идеальный образ для подиума в Милане!",
+  },
+];
+
+const wardrobe = [
+  { id: 1, type: "top", name: "Блузка" },
+  { id: 2, type: "bottom", name: "Юбка" },
+  { id: 3, type: "accessory", name: "Сумочка" },
+  { id: 4, type: "top", name: "Пиджак" },
+  { id: 5, type: "bottom", name: "Брюки" },
+  { id: 6, type: "accessory", name: "Очки" },
+];
+
+const stylistComments = [
+  "Фантастический выбор! Выглядит стильно и современно.",
+  "Очень смелый образ — идеально для подиума!",
+  "Мне нравится сочетание элементов. Ты — настоящий стилист!",
+  "Интересный стиль, но можно добавить яркий акцент.",
+];
+
+function getRandomComment() {
+  const index = Math.floor(Math.random() * stylistComments.length);
+  return stylistComments[index];
+}
+
+function DraggableItem({ item }) {
+  const [{ isDragging }, drag] = useDrag(() => ({
+    type: "item",
+    item,
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+  }));
+
+  return (
+    <div
+      ref={drag}
+      className={`p-2 m-2 border rounded-xl bg-gray-100 cursor-move ${
+        isDragging ? "opacity-50" : ""
+      }`}
+    >
+      {item.name}
+    </div>
+  );
+}
+
+function DropZone({ type, onDrop, children }) {
+  const [{ isOver }, drop] = useDrop(() => ({
+    accept: "item",
+    drop: (item) => onDrop(item, type),
+    collect: (monitor) => ({
+      isOver: monitor.isOver(),
+    }),
+  }));
+
+  return (
+    <div
+      ref={drop}
+      className={`min-h-[80px] p-4 border-dashed border-2 rounded-xl transition-all ${
+        isOver ? "bg-green-100 border-green-500" : "border-gray-300"
+      }`}
+    >
+      <p className="text-sm text-muted-foreground mb-2">{type.toUpperCase()}</p>
+      {children}
+    </div>
+  );
+}
+
+export default function FashionQuest() {
+  const [currentCity, setCurrentCity] = useState(null);
+  const [outfit, setOutfit] = useState({ top: null, bottom: null, accessory: null });
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [feedbackText, setFeedbackText] = useState("");
+
+  useEffect(() => {
+    const bgMusic = new Howl({
+      src: ["/music/fashion-show.mp3"],
+      loop: true,
+      volume: 0.3,
+    });
+    bgMusic.play();
+    return () => bgMusic.stop();
+  }, []);
+
+  const handleDrop = (item, type) => {
+    if (item.type === type) {
+      setOutfit((prev) => ({ ...prev, [type]: item }));
+    }
+  };
+
+  const handleShow = () => {
+    if (outfit.top && outfit.bottom && outfit.accessory) {
+      setFeedbackText(getRandomComment());
+      setShowFeedback(true);
+    } else {
+      alert("Сначала подбери все элементы образа!");
+    }
+  };
+
+  const handleReset = () => {
+    setOutfit({ top: null, bottom: null, accessory: null });
+    setShowFeedback(false);
+    setFeedbackText("");
+  };
+
+  return (
+    <DndProvider backend={HTML5Backend}>
+      <div className="p-6 max-w-5xl mx-auto text-center">
+        <h1 className="text-4xl font-bold mb-4">🌍 Fashion Quest</h1>
+        <p className="mb-6 text-lg text-muted-foreground">
+          Отправься в стильное путешествие по модным столицам мира!
+        </p>
+
+        {!currentCity && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {cities.map((city) => (
+              <motion.div
+                key={city.name}
+                whileHover={{ scale: 1.05 }}
+                className="cursor-pointer"
+                onClick={() => setCurrentCity(city)}
+              >
+                <Card>
+                  <CardContent className="p-4">
+                    <h2 className="text-xl font-semibold">{city.name}</h2>
+                    <p className="text-sm text-muted-foreground">{city.description}</p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            ))}
+          </div>
+        )}
+
+        {currentCity && (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-8 p-6 border rounded-2xl shadow-xl bg-white"
+          >
+            <h3 className="text-2xl font-bold mb-2">{currentCity.name}</h3>
+            <p className="text-lg mb-4">{currentCity.challenge}</p>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
+              <div>
+                <h4 className="font-semibold mb-2">Гардероб</h4>
+                {wardrobe.map((item) => (
+                  <DraggableItem key={item.id} item={item} />
+                ))}
+              </div>
+
+              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <DropZone type="top" onDrop={handleDrop}>
+                  {outfit.top && <p>{outfit.top.name}</p>}
+                </DropZone>
+                <DropZone type="bottom" onDrop={handleDrop}>
+                  {outfit.bottom && <p>{outfit.bottom.name}</p>}
+                </DropZone>
+                <DropZone type="accessory" onDrop={handleDrop}>
+                  {outfit.accessory && <p>{outfit.accessory.name}</p>}
+                </DropZone>
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-wrap gap-4 justify-center">
+              <Button onClick={handleShow}>Модный показ</Button>
+              <Button variant="outline" onClick={() => setCurrentCity(null)}>
+                Назад к карте
+              </Button>
+              <Button variant="ghost" onClick={handleReset}>
+                Сбросить образ
+              </Button>
+            </div>
+
+            {showFeedback && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="mt-6 p-4 bg-pink-50 border border-pink-300 rounded-xl"
+              >
+                <h4 className="text-lg font-semibold mb-2">💬 Комментарий стилиста:</h4>
+                <p>{feedbackText}</p>
+              </motion.div>
+            )}
+          </motion.div>
+        )}
+      </div>
+    </DndProvider>
+  );
+}
